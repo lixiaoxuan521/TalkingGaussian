@@ -8,13 +8,13 @@
 #
 # For inquiries contact  george.drettakis@inria.fr
 #
-
 import torch
 import math
 from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
 from scene.gaussian_model import GaussianModel
 from scene.motion_net import MotionNetwork, MouthMotionNetwork
 from utils.sh_utils import eval_sh
+
 
 def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None):
     """
@@ -102,14 +102,14 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
             "alpha": rendered_alpha,
             "radii": radii}
 
-
+# (viewpoint_camera 当前视角的相机信息, pc : GaussianModel,三维空间中待渲染的高斯体 motion_net 生成动态信息的网络: MotionNetwork, pipe设置调试信息, bg_color : torch.Tensor,背景颜色 scaling_modifier = 1.0, 缩放因子frame_idx = None, 渲染的帧索引return_attn = False
 def render_motion(viewpoint_camera, pc : GaussianModel, motion_net : MotionNetwork, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, frame_idx = None, return_attn = False):
     """
     Render the scene. 
     
     Background tensor (bg_color) must be on GPU!
     """
- 
+
     # Create zero tensor. We will use it to make pytorch return gradients of the 2D (screen-space) means
     screenspace_points = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, requires_grad=True, device="cuda") + 0
     try:
@@ -143,14 +143,16 @@ def render_motion(viewpoint_camera, pc : GaussianModel, motion_net : MotionNetwo
 
     # ind_code = motion_net.individual_codes[frame_idx if frame_idx is not None else viewpoint_camera.talking_dict["img_id"]]
     ind_code = None
-    motion_preds = motion_net(pc.get_xyz, audio_feat, exp_feat, ind_code) #  
+    # 计算运动偏移量，
+    motion_preds = motion_net(pc.get_xyz, audio_feat, exp_feat, ind_code) #
+    # 动态调整后的三维坐标
     means3D = pc.get_xyz + motion_preds['d_xyz']
     means2D = screenspace_points
     # opacity = pc.opacity_activation(pc._opacity + motion_preds['d_opa'])
     opacity = pc.get_opacity
 
     cov3D_precomp = None
-    # scales = pc.get_scaling
+    # scales = pc.get_scaling 动态计算旋转角度，动态计算缩放因子
     scales = pc.scaling_activation(pc._scaling + motion_preds['d_scale'])
     rotations = pc.rotation_activation(pc._rotation + motion_preds['d_rot'])
 

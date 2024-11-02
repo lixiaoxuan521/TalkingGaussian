@@ -31,7 +31,9 @@ except ImportError:
     TENSORBOARD_FOUND = False
 
 def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from):
+    # 每隔2000次迭代，就对模型进行一次评估 ，总共50000此迭代，评估25此
     testing_iterations = [i for i in range(0, opt.iterations + 1, 2000)]
+    # 定期保存检查点，每10000轮保存一次
     checkpoint_iterations =  saving_iterations = [i for i in range(0, opt.iterations + 1, 10000)] + [opt.iterations]
 
     # vars
@@ -44,11 +46,13 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     select_interval = 7
 
     first_iter = 0
+    # 用来记录一些日志
     tb_writer = prepare_output_and_logger(dataset)
     gaussians = GaussianModel(dataset.sh_degree)
     scene = Scene(dataset, gaussians)
 
     motion_net = MouthMotionNetwork(args=dataset).cuda()
+    print(motion_net)
     motion_optimizer = torch.optim.AdamW(motion_net.get_params(5e-3, 5e-4), betas=(0.9, 0.99), eps=1e-8)
     scheduler = torch.optim.lr_scheduler.LambdaLR(motion_optimizer, lambda iter: (0.5 ** (iter / mouth_select_iter)) if iter < mouth_select_iter else 0.1 ** (iter / bg_iter))
 

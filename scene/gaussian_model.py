@@ -22,9 +22,12 @@ from utils.graphics_utils import BasicPointCloud
 from utils.general_utils import strip_symmetric, build_scaling_rotation
 
 class GaussianModel:
-
+  # 用于配置和初始化与高斯分布相关的激活函数和变换函数
     def setup_functions(self):
+        #用于构建协方差矩阵
+        # scaling 用于控制高斯分布的大小，scaling_modifier用于进一步调整缩放值，rotation表示3D空间中的旋转
         def build_covariance_from_scaling_rotation(scaling, scaling_modifier, rotation):
+            # 既包含旋转，也包含缩放
             L = build_scaling_rotation(scaling_modifier * scaling, rotation)
             actual_covariance = L @ L.transpose(1, 2)
             symm = strip_symmetric(actual_covariance)

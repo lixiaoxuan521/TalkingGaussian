@@ -33,7 +33,7 @@ except ImportError:
 def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from):
     testing_iterations = [i for i in range(0, opt.iterations + 1, 2000)]
     checkpoint_iterations =  saving_iterations = [i for i in range(0, opt.iterations + 1, 10000)] + [opt.iterations]
-
+    #在warm_step之前，render函数是基础渲染，在warm_step之后才会加入动态渲染
     # vars
     warm_step = 3000
     opt.densify_until_iter = opt.iterations - 1000
@@ -48,9 +48,11 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     first_iter = 0
     tb_writer = prepare_output_and_logger(dataset)
     gaussians = GaussianModel(dataset.sh_degree)
+    print(gaussians)
     scene = Scene(dataset, gaussians)
 
     motion_net = MotionNetwork(args=dataset).cuda()
+    print(motion_net)
     motion_optimizer = torch.optim.AdamW(motion_net.get_params(5e-3, 5e-4), betas=(0.9, 0.99), eps=1e-8)
     scheduler = torch.optim.lr_scheduler.LambdaLR(motion_optimizer, lambda iter: (0.5 ** (iter / mouth_select_iter)) if iter < mouth_select_iter else 0.1 ** (iter / bg_iter))
 
@@ -147,7 +149,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             render_pkg = render(viewpoint_cam, gaussians, pipe, background)
         else:
             render_pkg = render_motion(viewpoint_cam, gaussians, motion_net, pipe, background, return_attn=True)
-
+        # 渲染图像、透明度、视点空间点、可见性过滤器和半径
         image_white, alpha, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["alpha"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
         
         gt_image  = viewpoint_cam.original_image.cuda() / 255.0
