@@ -24,6 +24,8 @@ from tqdm import tqdm
 from utils.image_utils import psnr
 from argparse import ArgumentParser, Namespace
 from arguments import ModelParams, PipelineParams, OptimizationParams
+from PIL import Image
+import numpy as np
 try:
     from torch.utils.tensorboard import SummaryWriter
     TENSORBOARD_FOUND = True
@@ -154,6 +156,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         
         gt_image  = viewpoint_cam.original_image.cuda() / 255.0
         gt_image_white = gt_image * head_mask + background[:, None, None] * ~head_mask
+        gt_image_white_np = (gt_image_white.cpu().numpy() * 255).astype(np.uint8)  # 转换为 NumPy 数组并调整范围
+# 假设 gt_image_white 是 [C, H, W] 格式，转换为 [H, W, C]
 
         if iteration > motion_stop_iter:
             for param in motion_net.parameters():

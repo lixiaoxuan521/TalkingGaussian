@@ -59,6 +59,7 @@ class AudioNet(nn.Module):
 
     def forward(self, x):
         half_w = int(self.win_size/2)
+        # 将第二个纬度进行切片
         x = x[:, :, 8-half_w:8+half_w]
         x = self.encoder_conv(x).squeeze(-1)
         x = self.encoder_fc1(x)
@@ -180,12 +181,12 @@ class MotionNetwork(nn.Module):
     def forward(self, x, a, e=None, c=None):
         # x: [N, 3], in [-bound, bound]
         enc_x = self.encode_x(x, bound=self.bound)
-
+        # 音频
         enc_a = self.encode_audio(a)
         enc_a = enc_a.repeat(enc_x.shape[0], 1)
         aud_ch_att = self.aud_ch_att_net(enc_x)
         enc_w = enc_a * aud_ch_att
-        
+        # 表情
         eye_att = torch.relu(self.eye_att_net(enc_x))
         enc_e = self.exp_encode_net(e[:-1])
         enc_e = torch.cat([enc_e, e[-1:]], dim=-1)
@@ -321,12 +322,13 @@ class MouthMotionNetwork(nn.Module):
         enc_x = self.encode_x(x, bound=self.bound)
 
         enc_a = self.encode_audio(a)
+        # 将enc_a的大小扩展到与enc_x的第一个纬度相匹配
         enc_w = enc_a.repeat(enc_x.shape[0], 1)
         # aud_ch_att = self.aud_ch_att_net(enc_x)
         # enc_w = enc_a * aud_ch_att
-
+        # 将位置编码和音频编码的最后一个纬度进行连接
         h = torch.cat([enc_x, enc_w], dim=-1)
-
+        # 专门用于处理位置和音频特征的联合特征，以预测后续位移
         h = self.sigma_net(h)
 
         d_xyz = h * 1e-2
